@@ -1,6 +1,23 @@
 west south north
 
-coins.blue + coins.red * Math.pow(coins.shiny,2) + Math.pow(coins.concave,3) - coins.corroded
+
+for (var a=0; a < 5; a++) {
+  for (var b=0; b < 5; b++) {
+    for (var c=0; c < 5; c++) {
+      for (var d=0; d < 5; d++) {
+        for (e=0; e < 5; e++) {
+          var coins = [9,5,2,7,3]
+          var r = coins[a] + coins[b] * coins[c]*coins[c] + coins[d]*coins[d]*coins[d] - coins[e];
+          if (r === 399) {
+            console.log([coins[a],coins[b],coins[c],coins[d],coins[e]]);
+          }
+        }
+      }
+    }
+  }
+}
+
+blue + red * shiny^2 + concave^3 - corroded
 
 blue
 red

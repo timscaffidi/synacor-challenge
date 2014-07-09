@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <deque>
 #include <cstdlib>
@@ -88,7 +89,11 @@ unsigned short opcode;
 
 deque<unsigned char> commands;
 
+bool halt_vm = false;
 bool debug = false;
+bool trace = false;
+ofstream trace_file;
+
 int break_on_register = -1;
 
 int num_op_args(unsigned short code)
@@ -104,15 +109,15 @@ int num_op_args(unsigned short code)
 		case OP_POP:
 			return 1;
 		case OP_EQ:
-			return 3; 
+			return 3;
 		case OP_GT:
-			return 3; 
+			return 3;
 		case OP_JMP:
 			return 1;
 		case OP_JT:
-			return 2; 
+			return 2;
 		case OP_JF:
-			return 2; 
+			return 2;
 		case OP_ADD:
 			return 3;
 		case OP_MULT:
@@ -122,7 +127,7 @@ int num_op_args(unsigned short code)
 		case OP_AND:
 			return 3;
 		case OP_OR:
-			return 3; 
+			return 3;
 		case OP_NOT:
 			return 2;
 		case OP_RMEM:
@@ -136,7 +141,7 @@ int num_op_args(unsigned short code)
 		case OP_OUT:
 			return 1;
 		case OP_IN:
-			return 1; 
+			return 1;
 		case OP_NOOP:
 			return 0;
 		default:
@@ -157,15 +162,15 @@ string opCodeStr(unsigned short code)
 		case OP_POP:
 			return "POP";
 		case OP_EQ:
-			return"EQ"; 
+			return"EQ";
 		case OP_GT:
-			return"GT"; 
+			return"GT";
 		case OP_JMP:
 			return "JMP";
 		case OP_JT:
-			return"JT"; 
+			return"JT";
 		case OP_JF:
-			return"JF"; 
+			return"JF";
 		case OP_ADD:
 			return "ADD";
 		case OP_MULT:
@@ -175,7 +180,7 @@ string opCodeStr(unsigned short code)
 		case OP_AND:
 			return "AND";
 		case OP_OR:
-			return"OR"; 
+			return"OR";
 		case OP_NOT:
 			return "NOT";
 		case OP_RMEM:
@@ -189,11 +194,29 @@ string opCodeStr(unsigned short code)
 		case OP_OUT:
 			return "OUT";
 		case OP_IN:
-			return"IN"; 
+			return"IN";
 		case OP_NOOP:
 			return "NOOP";
 		default:
 			return "UNKNOWN";
+	}
+}
+
+void write_trace_file()
+{
+	if(!trace_file.is_open())
+	{
+		trace_file.open("trace.txt", ios::trunc | ios::out);
+	}
+	if(trace_file.is_open())
+	{
+		trace_file << left << setw(6) << prog_counter << setw(6) << prog_counter/2
+		<< setw(5) << opCodeStr(opcode);
+		for (int i = 0; i < num_op_args(opcode); ++i)
+		{
+			trace_file << setw(7) << val_string(args[i]);
+		}
+		trace_file << endl;
 	}
 }
 
@@ -259,6 +282,7 @@ void debugger()
 		<< "p:   pop value off stack\n"
 		<< "m:   alter program memory address\n"
 		<< "w:   watch for register being used\n"
+		<< "t:   trace output to trace.txt\n"
 		<< "d:   exit debug mode\n"
 		<< "any other key to step forward.\n";
 		char in;
@@ -271,7 +295,9 @@ void debugger()
 		{
 			case 'q':
 				cout << "Goodbye!\n";
-				exit(0);
+				halt_vm = true;
+				debug = false;
+				done = true;
 				break;
 			case '0':
 			case '1':
@@ -325,6 +351,10 @@ void debugger()
 					break_on_register = intput;
 				}
 				break;
+			case 't':
+				trace = !trace;
+				cout << "tracing is now " << (trace ? "on\n" : "off\n") ;
+				break;
 			case 'd':
 				debug = false;
 				done = true;
@@ -366,7 +396,7 @@ int main ()
 			commands.pop_back();
 		}
 
-		while(prog_counter < size)
+		while(prog_counter < size && !halt_vm)
 		{
 			opcode = ((unsigned short*)memblock)[prog_counter/2];
 			args = ((unsigned short*)memblock)+(prog_counter+2)/2;
@@ -377,7 +407,7 @@ int main ()
 			// see if any of the arguments used by this operation are a register we are watching for
 			for (int i = 0; i < num_op_args(opcode); ++i)
 			{
-				if (is_reg(args[i]) && (int)(reg_index(args[i])) == break_on_register) 
+				if (is_reg(args[i]) && (int)(reg_index(args[i])) == break_on_register)
 				{
 					debug = true;
 					cout << "\nbreak on register " << break_on_register << " triggered debug mode\n";
@@ -390,12 +420,18 @@ int main ()
 				debugger();
 			}
 
+			if(trace)
+			{
+				write_trace_file();
+			}
+
 			prog_counter +=2;
 			switch(opcode)
 			{
 				case OP_HALT: //halt: 0
 					// stop execution and terminate the program
 					prog_counter = size;
+					halt_vm = true;
 					cout << "\nVM executed halt command\n";
 					break;
 				case OP_SET: // set: 1 a b
@@ -538,6 +574,11 @@ int main ()
 			}
 		}
 		cout << "\n\nDone\n";
+
+		if(trace_file.is_open())
+		{
+			trace_file.close();
+		}
 
 		delete[] memblock;
 	}
