@@ -1,0 +1,9 @@
+west south north
+
+coins.blue + coins.red * Math.pow(coins.shiny,2) + Math.pow(coins.concave,3) - coins.corroded
+
+blue
+red
+shiny
+concave
+corroded
